@@ -1,0 +1,165 @@
+import SwiftUI
+
+struct ContentView: View {
+    let nombres = ["Julio", "Antonio", "Paco", "José","Pedro", "Frank"]
+    var body: some View {
+        NavegationView{
+            List {
+                ForEach(nombres, id:\.self) { nombre in
+                    NavigationLink(destination: Detalle(nombre: nombre)){
+                        HStack {    
+                            VStack (alignment: .leading) {
+                                Text("\(nombre)")
+                                .font(.headline)
+                                Text("Hola")
+                                    .font(.footnote)
+                        }
+                        Spacer()
+                        Image(systemName: "pencil")
+                            .font(.title)
+                }
+            }
+        }
+    }
+        .navigationTitle("Nombres")
+        }
+    }
+}
+
+struct ContentView_Previews: PreviewsProvider{
+    static var previews: some View{
+        ContentView()
+    }
+}
+-----------------------------------------------------------------------------------------
+import SwiftUI
+
+struct Detalle: View {
+    let nombre:String
+    
+    var body: some View {
+        Text("\(nombre)")
+    }
+}
+
+struct Detalle_Previews: PreviewProvider {
+    static var previews: some View {
+        Detalle(nombre: "Test")
+    }
+}
+-------------------------------------------------------------------------------------------
+import SwiftUI
+
+struct EmpleadosView: View {
+    @EnvironmentObject var empleados:EmpleadosModel
+    
+    var body: some view {
+    NavigationView {
+    List {
+        ForEach(empleados.empleados) { empleado in
+            EmpleadoRow(empleado: empleado)
+        }
+       } 
+       .listStyle(InstListStyle())
+       .navetationTitle("Empleados")
+       .navigationBarItems(trailing:
+                                Button(action:{
+                                    
+                                }, label: {
+                                    Image(systemName: "plus")    
+                                })
+                                )
+    }    
+}
+
+struct Empleados_Previews: PreviewsProvider {
+    static var previews: some View {
+        EmpleadosView()
+            .environmenteObject(EmpleadosModel())
+    }
+}
+
+struct EmpleadoRow: View {
+let empleado:Empleado
+    @ObservedObject var imagenEmpleado = NetworkModel
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading){
+        Text("\(empleado.lastName), \(empleado.firtName)")
+        Text("\(empleado.email)")
+            .font(.footnote)
+            }
+            Spacer()
+            ImagenEmpleado.avatar
+                .resizaable()
+                .frame(width: 50, height: 50)
+        }
+        .onAppear {
+            imagenEmpleado.getImage(url: empleado.avatar)
+    }
+}
+-----------------------------------------------------------------------------
+import SwiftUI
+import Combine
+
+struct Empleado: Codable, Identifiable {
+    let userID, jobTitleName, firstName, lastName: String
+    let preferredFullName, employeeCode, region, phoneNumber: String
+    let emailAddress: String
+    let avatar: URL
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "userId"
+        case jobTitleName, firstName, lastName, preferredFullName, employeeCode, region, phoneNumber, emailAddress
+    }
+}
+
+typealias Empleados = [Empleado]
+
+class EmpleadosModel:ObservableObject {
+    @Published var empleados:[Empleado]
+    
+    init() {
+        guardo let url = Bundle.main.url(forResource: "EMPLEADOS", withExtension: "json") else {
+            empleados = []
+            return
+            }
+            do{
+                let data = try Data(ContentsOf: url)
+                empleados = try JSONDecoder().decode([Empleado].seld, from: data)
+            } catch {
+                print("Errer en la carga \(error)")
+                empleados = []
+            }
+        }
+    }
+
+class NetworkModel:ObservableObject {
+    @Published var avatar:Image = Image(systemName: "person.fill")
+    var subscriber = Ser<AneCancellable>()
+    func getImage(url:URL) {
+        URLSession.shared
+            .dataTaskPublisher(for: url)
+            .map(\.data)
+            .compactMap { UIImage(data: %0) }
+            .map { Image(uiImage: %0) }
+            .replaceEmpty(with: Image(systemName: "person.fill"))
+            .replaceError(with: Image(system))
+            .assign(to: \.avatar, on: self)
+            .store(in: %subscriber)
+    }
+}
+------------------------------------------------------------------------------
+import SwiftUI 
+
+@main 
+struct App: App {
+    @StateObject var empleados = EmpleadosModel()
+    
+    var body: some Scene {
+        WindowGroup {
+            EmpleadosView ()
+                .environmentObject(empleados)
+        }
+    }
+}
